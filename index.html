@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=700, user-scalable=yes">
 <title>Kamera Kurulum Fiyat Hesaplama</title>
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#1a73e8">
@@ -113,6 +113,13 @@ header h1{font-size:1.15rem;font-weight:600}
 .text-right{text-align:right}
 .mt8{margin-top:8px}.mb8{margin-bottom:8px}
 
+/* Toast */
+.toast{position:fixed;top:20px;left:50%;transform:translateX(-50%);padding:12px 24px;border-radius:10px;color:#fff;font-weight:600;font-size:.9rem;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;text-align:center;max-width:90%;box-shadow:0 4px 12px rgba(0,0,0,.2)}
+.toast.show{opacity:1}
+.toast-success{background:#1e8e3e}
+.toast-error{background:#d93025}
+.toast-info{background:#1a73e8}
+
 @media(max-width:480px){
   .mat-item{flex-wrap:wrap}
   .mat-item .mi-field input{width:65px}
@@ -219,6 +226,8 @@ header h1{font-size:1.15rem;font-weight:600}
     </div>
   </div>
 </div>
+
+<div id="toast" class="toast"></div>
 
 <!-- Detail Modal -->
 <div class="modal-overlay" id="detailModal">
@@ -552,7 +561,7 @@ function getFormData() {
 
 function saveProject() {
   const data = getFormData();
-  if (!data.customer) { alert('Musteri adi girin!'); return; }
+  if (!data.customer) { showToast('Musteri adi girin!', 'error'); return; }
   let projects = JSON.parse(localStorage.getItem('camProjects') || '[]');
   if (editingId) {
     const idx = projects.findIndex(p => p.id === editingId);
@@ -562,7 +571,7 @@ function saveProject() {
     projects.unshift(data);
   }
   localStorage.setItem('camProjects', JSON.stringify(projects));
-  alert('Kaydedildi!');
+  showToast('Kaydedildi!', 'success');
   resetForm();
   renderHistory();
 }
@@ -787,8 +796,8 @@ function addNewProduct() {
   const price = parseFloat(document.getElementById('newPrice').value) || 0;
   const priceMax = parseFloat(document.getElementById('newPriceMax').value) || null;
 
-  if (!group || !name) { alert('Grup ve urun adi girin!'); return; }
-  if (price <= 0) { alert('Fiyat girin!'); return; }
+  if (!group || !name) { showToast('Grup ve urun adi girin!', 'error'); return; }
+  if (price <= 0) { showToast('Fiyat girin!', 'error'); return; }
 
   const catalog = getCatalog();
   const newItem = {
@@ -806,7 +815,7 @@ function addNewProduct() {
 
   renderPriceEditor();
   renderProductGroups();
-  alert('Urun eklendi!');
+  showToast('Urun eklendi!', 'success');
 }
 
 // ============ TABS ============
@@ -823,6 +832,15 @@ function switchTab(name) {
 
 // ============ UTILS ============
 function fmtMoney(v) { return v.toLocaleString('tr-TR', {minimumFractionDigits:0, maximumFractionDigits:2}) + ' TL'; }
+
+function showToast(msg, type) {
+  type = type || 'info';
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast toast-' + type + ' show';
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => { t.classList.remove('show'); }, 2500);
+}
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
 document.getElementById('detailModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
