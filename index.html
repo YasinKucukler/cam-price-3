@@ -375,11 +375,23 @@ renderHistory();
 calculate();
 
 // ============ PRODUCT GROUP BUTTONS ============
+function getGroupCounts() {
+  const counts = {};
+  materials.forEach(m => {
+    const p = getProduct(m.productId);
+    if (p) {
+      counts[p.group] = (counts[p.group] || 0) + m.qty;
+    }
+  });
+  return counts;
+}
+
 function renderProductGroups() {
   const groups = getGroups();
   const container = document.getElementById('productGroups');
   container.innerHTML = '';
   const groupNames = Object.keys(groups);
+  const counts = getGroupCounts();
 
   groupNames.forEach(g => {
     const wrap = document.createElement('div');
@@ -387,7 +399,8 @@ function renderProductGroups() {
 
     const btn = document.createElement('button');
     btn.className = 'group-btn' + (openGroup === g ? ' open' : '');
-    btn.textContent = g;
+    const count = counts[g] || 0;
+    btn.innerHTML = esc(g) + (count > 0 ? ` <span style="background:#fff;color:var(--primary);border-radius:50%;padding:1px 6px;font-size:.7rem;margin-left:4px;font-weight:700">${count}</span>` : '');
     btn.onclick = () => toggleGroup(g);
     wrap.appendChild(btn);
     container.appendChild(wrap);
@@ -407,14 +420,20 @@ function toggleGroup(group) {
   renderProductGroups();
 }
 
+function getProductCount(productId) {
+  return materials.filter(m => m.productId === productId).reduce((s, m) => s + m.qty, 0);
+}
+
 function buildProductRow(p) {
   const isMetre = p.name.includes('(mt)');
   const qtyLabel = isMetre ? 'Metre' : 'Adet';
   let rangeHint = '';
   if (p.priceMax) rangeHint = `<span style="font-size:.65rem;color:var(--text2);margin-left:4px">(${fmtMoney(p.price)} - ${fmtMoney(p.priceMax)})</span>`;
-  return `<div class="sub-item" style="flex-wrap:wrap;gap:6px;padding:8px 10px">
+  const added = getProductCount(p.id);
+  const addedBadge = added > 0 ? `<span style="background:#1e8e3e;color:#fff;border-radius:10px;padding:2px 8px;font-size:.7rem;font-weight:600;margin-left:6px">${added} ${isMetre ? 'mt' : 'adet'} eklendi</span>` : '';
+  return `<div class="sub-item" style="flex-wrap:wrap;gap:6px;padding:8px 10px;${added > 0 ? 'background:#e6f4ea;' : ''}">
     <div style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:6px">
-      <span class="si-name">${esc(p.name)}${rangeHint}</span>
+      <span class="si-name">${esc(p.name)}${rangeHint}${addedBadge}</span>
     </div>
     <div style="display:flex;gap:6px;align-items:center;width:100%">
       <div style="display:flex;flex-direction:column;gap:2px">
@@ -484,6 +503,7 @@ function addProductWithQty(productId) {
     priceMax: p.priceMax || null
   });
   showToast(p.name + ' eklendi!', 'success');
+  renderProductGroups();
   renderMaterials();
   calculate();
 }
