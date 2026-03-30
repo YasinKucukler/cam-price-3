@@ -153,6 +153,8 @@ header h1{font-size:1.15rem;font-weight:600}
 
     <div id="productGroups"></div>
 
+    <button class="btn btn-primary btn-block" onclick="showMaterialList()" style="margin-bottom:12px" id="matListBtn">Listeyi Goruntule (<span id="matCount">0</span> urun)</button>
+
     <!-- Labor -->
     <div class="labor-box">
       <div class="lb-title">Iscilik</div>
@@ -218,6 +220,20 @@ header h1{font-size:1.15rem;font-weight:600}
 </div>
 
 <div id="toast" class="toast"></div>
+
+<!-- Material List Modal -->
+<div class="modal-overlay" id="matListModal">
+  <div class="modal" style="max-width:550px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <h3 style="margin:0">Malzeme Listesi</h3>
+      <button class="btn btn-outline btn-sm" onclick="closeMatList()">Kapat</button>
+    </div>
+    <div id="matListBody"></div>
+    <div id="matListTotal" style="margin-top:10px;padding-top:10px;border-top:2px solid var(--border);display:flex;justify-content:space-between;font-weight:700;font-size:.95rem">
+      <span>Toplam</span><span id="matListSum">0 TL</span>
+    </div>
+  </div>
+</div>
 
 <!-- Detail Modal -->
 <div class="modal-overlay" id="detailModal">
@@ -537,6 +553,66 @@ function addProductWithQty(productId) {
   calculate();
 }
 
+// ============ MATERIAL LIST MODAL ============
+function showMaterialList() {
+  const body = document.getElementById('matListBody');
+  if (materials.length === 0) {
+    body.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px">Henuz urun eklenmedi.</p>';
+    document.getElementById('matListSum').textContent = '0 TL';
+    document.getElementById('matListModal').classList.add('show');
+    return;
+  }
+
+  let total = 0;
+  body.innerHTML = materials.map((m, i) => {
+    const isMetre = m.name.includes('(mt)');
+    const rowTotal = m.qty * m.price;
+    total += rowTotal;
+    return `<div style="display:flex;gap:6px;align-items:center;padding:8px;margin-bottom:4px;background:#f8f9fa;border-radius:8px;flex-wrap:wrap;${rowTotal > 0 ? '' : 'opacity:.5'}">
+      <div style="flex:2;min-width:110px;font-weight:500;font-size:.82rem">${esc(m.name)}</div>
+      <div style="display:flex;gap:4px;align-items:center">
+        <input type="number" value="${m.qty}" min="0" style="width:50px;padding:4px;border:1.5px solid var(--border);border-radius:5px;font-size:.8rem;text-align:center" onchange="updateMatFromList(${i},'qty',this.value)">
+        <span style="font-size:.65rem;color:var(--text2)">${isMetre ? 'mt' : 'ad'}</span>
+      </div>
+      <span style="font-size:.7rem;color:var(--text2)">x</span>
+      <div style="display:flex;gap:4px;align-items:center">
+        <input type="number" value="${m.price}" min="0" step="0.1" style="width:65px;padding:4px;border:1.5px solid var(--border);border-radius:5px;font-size:.8rem;text-align:center" onchange="updateMatFromList(${i},'price',this.value)">
+        <span style="font-size:.65rem;color:var(--text2)">TL</span>
+      </div>
+      <div style="font-weight:700;font-size:.82rem;color:var(--primary);min-width:70px;text-align:right">${fmtMoney(rowTotal)}</div>
+      <button onclick="removeMatFromList(${i})" style="background:#d93025;color:#fff;border:none;border-radius:5px;padding:4px 8px;font-size:.72rem;cursor:pointer;font-weight:600">Sil</button>
+    </div>`;
+  }).join('');
+
+  document.getElementById('matListSum').textContent = fmtMoney(total);
+  document.getElementById('matListModal').classList.add('show');
+}
+
+function closeMatList() {
+  document.getElementById('matListModal').classList.remove('show');
+}
+
+function updateMatFromList(idx, field, val) {
+  if (field === 'qty') materials[idx].qty = parseFloat(val) || 0;
+  if (field === 'price') materials[idx].price = parseFloat(val) || 0;
+  // Update total in modal
+  const total = materials.reduce((s, m) => s + m.qty * m.price, 0);
+  document.getElementById('matListSum').textContent = fmtMoney(total);
+  updateMatCount();
+  calculate();
+}
+
+function removeMatFromList(idx) {
+  materials.splice(idx, 1);
+  showMaterialList();
+  renderProductGroups();
+  calculate();
+}
+
+function updateMatCount() {
+  document.getElementById('matCount').textContent = materials.length;
+}
+
 function updateMat(idx, field, val) {
   if (field === 'qty') materials[idx].qty = parseFloat(val) || 0;
   if (field === 'price') materials[idx].price = parseFloat(val) || 0;
@@ -571,6 +647,7 @@ function calculate() {
   document.getElementById('sumProfit').textContent = fmtMoney(profit);
   document.getElementById('sumProfit').className = profit >= 0 ? 'profit-pos' : 'profit-neg';
   document.getElementById('sumMargin').textContent = '%' + margin;
+  updateMatCount();
 }
 
 // ============ SAVE / LOAD ============
@@ -876,6 +953,7 @@ function showToast(msg, type) {
 function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
 
 document.getElementById('detailModal').addEventListener('click', function(e) { if (e.target === this) closeModal(); });
+document.getElementById('matListModal').addEventListener('click', function(e) { if (e.target === this) closeMatList(); });
 
 // ============ PWA ============
 if ('serviceWorker' in navigator) {
