@@ -262,12 +262,12 @@ const DEFAULT_CATALOG = [
   {id:"sd128",group:"Depolama",subgroup:"SD Kart",name:"SD 128 GB",price:1400},
   {id:"sd256",group:"Depolama",subgroup:"SD Kart",name:"SD 256 GB",price:2500},
   {id:"sd512",group:"Depolama",subgroup:"SD Kart",name:"SD 512 GB",price:4500},
-  {id:"cat6",group:"Kablo",name:"CAT6 Kablo (mt)",price:14,priceMax:30},
-  {id:"cctv022",group:"Kablo",name:"CCTV 0,22 (mt)",price:10,priceMax:20},
-  {id:"cctv05",group:"Kablo",name:"CCTV 0,50 (mt)",price:15,priceMax:25},
-  {id:"elk075",group:"Kablo",name:"Elektrik 0,75 (mt)",price:35},
-  {id:"elk120",group:"Kablo",name:"Elektrik 1,20 (mt)",price:45},
-  {id:"elk150",group:"Kablo",name:"Elektrik 1,50 (mt)",price:55},
+  {id:"cat6",group:"Kablo",subgroup:"CAT6",name:"CAT6 (mt)",price:14,priceMax:30},
+  {id:"cctv022",group:"Kablo",subgroup:"CCTV",name:"CCTV 0,22 (mt)",price:10,priceMax:20},
+  {id:"cctv05",group:"Kablo",subgroup:"CCTV",name:"CCTV 0,50 (mt)",price:15,priceMax:25},
+  {id:"elk075",group:"Kablo",subgroup:"Elektrik",name:"0,75 (mt)",price:35},
+  {id:"elk120",group:"Kablo",subgroup:"Elektrik",name:"1,20 (mt)",price:45},
+  {id:"elk150",group:"Kablo",subgroup:"Elektrik",name:"1,50 (mt)",price:55},
   {id:"rj45k",group:"Konnektor",name:"RJ45 Kilifli",price:15},
   {id:"rj45s",group:"Konnektor",name:"RJ45 Kilifsiz",price:10},
   {id:"bnbc",group:"Konnektor",name:"BNBC",price:150,priceMax:200},
@@ -333,7 +333,7 @@ const DEFAULT_CATALOG = [
 
 const LABOR_RATE = 0.30;
 const LABOR_MIN = 4000;
-const CATALOG_VERSION = 6;
+const CATALOG_VERSION = 7;
 
 // ============ CATALOG MANAGEMENT ============
 function getCatalog() {
