@@ -355,6 +355,7 @@ let materials = []; // [{uid, productId, name, qty, price}]
 let editingId = null;
 let viewingId = null;
 let openGroup = null;
+let openSubgroup = null;
 
 // ============ INIT ============
 document.getElementById('projectDate').value = new Date().toISOString().split('T')[0];
@@ -414,10 +415,28 @@ function renderProductGroups() {
 
       if (hasSubgroups) {
         const subgroups = [...new Set(items.map(p => p.subgroup).filter(Boolean))];
-        subgroups.forEach(sg => {
-          html += `<div style="font-size:.78rem;font-weight:600;color:var(--text2);margin:8px 0 4px;padding-left:4px">${esc(sg)}</div>`;
-          items.filter(p => p.subgroup === sg).forEach(p => { html += buildProductRow(p); });
-        });
+        if (!openSubgroup) {
+          // Show subgroup buttons
+          subgroups.forEach(sg => {
+            const safeSg = sg.replace(/'/g, "\\'");
+            const sgItems = items.filter(p => p.subgroup === sg);
+            const sgCount = sgItems.reduce((s, p) => s + getProductEntries(p.id).length, 0);
+            html += `<button onclick="event.stopPropagation();selectSubgroup('${safeSg}')" style="width:100%;padding:8px 12px;margin-bottom:4px;background:#f0f6ff;border:1.5px solid var(--border);border-radius:6px;cursor:pointer;font-size:.8rem;font-weight:600;color:var(--primary);display:flex;justify-content:space-between;align-items:center">
+              <span>${esc(sg)}</span>
+              <span style="display:flex;align-items:center;gap:6px">
+                ${sgCount > 0 ? '<span style="background:#1e8e3e;color:#fff;border-radius:10px;padding:1px 7px;font-size:.68rem">' + sgCount + '</span>' : ''}
+                <span style="font-size:.7rem;color:var(--text2)">&#9654;</span>
+              </span>
+            </button>`;
+          });
+        } else {
+          // Show back button + selected subgroup items
+          html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <button onclick="event.stopPropagation();openSubgroup=null;renderProductGroups()" style="background:var(--primary);color:#fff;border:none;border-radius:6px;padding:5px 12px;font-size:.75rem;cursor:pointer;font-weight:600">&#9664; Geri</button>
+            <span style="font-weight:600;font-size:.85rem;color:var(--primary)">${esc(openSubgroup)}</span>
+          </div>`;
+          items.filter(p => p.subgroup === openSubgroup).forEach(p => { html += buildProductRow(p); });
+        }
       } else {
         items.forEach(p => { html += buildProductRow(p); });
       }
@@ -438,6 +457,12 @@ function renderProductGroups() {
 
 function toggleGroup(group) {
   openGroup = openGroup === group ? null : group;
+  openSubgroup = null;
+  renderProductGroups();
+}
+
+function selectSubgroup(sg) {
+  openSubgroup = sg;
   renderProductGroups();
 }
 
