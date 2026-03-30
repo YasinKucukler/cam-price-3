@@ -151,16 +151,7 @@ header h1{font-size:1.15rem;font-weight:600}
       <div class="form-group"><label>Not</label><textarea id="projectNote" placeholder="Proje ile ilgili notlar..."></textarea></div>
     </div>
 
-    <div class="card">
-      <div class="card-title">Urun Ekle</div>
-      <div id="productGroups"></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">Malzeme Listesi</div>
-      <div id="materialList"></div>
-      <div id="emptyMat" class="text-muted" style="text-align:center;padding:16px">Yukaridaki butonlardan urun ekleyin</div>
-    </div>
+    <div id="productGroups"></div>
 
     <!-- Labor -->
     <div class="labor-box">
@@ -363,8 +354,6 @@ function getGroups() {
 let materials = []; // [{uid, productId, name, qty, price}]
 let editingId = null;
 let viewingId = null;
-let openGroup = null;
-let openSubgroup = null;
 
 // ============ INIT ============
 document.getElementById('projectDate').value = new Date().toISOString().split('T')[0];
@@ -375,53 +364,40 @@ renderHistory();
 calculate();
 
 // ============ PRODUCT GROUP BUTTONS ============
-function getGroupCounts() {
-  const counts = {};
-  materials.forEach(m => {
-    const p = getProduct(m.productId);
-    if (p) {
-      counts[p.group] = (counts[p.group] || 0) + m.qty;
-    }
-  });
-  return counts;
-}
-
 function renderProductGroups() {
   const groups = getGroups();
   const container = document.getElementById('productGroups');
-  container.innerHTML = '';
-  const groupNames = Object.keys(groups);
-  const counts = getGroupCounts();
+  let html = '';
 
-  groupNames.forEach(g => {
-    const wrap = document.createElement('div');
-    wrap.style.display = 'inline';
+  Object.keys(groups).forEach(g => {
+    const items = groups[g];
+    const hasSubgroups = items.some(p => p.subgroup);
 
-    const btn = document.createElement('button');
-    btn.className = 'group-btn' + (openGroup === g ? ' open' : '');
-    const count = counts[g] || 0;
-    btn.innerHTML = esc(g) + (count > 0 ? ` <span style="background:#fff;color:var(--primary);border-radius:50%;padding:1px 6px;font-size:.7rem;margin-left:4px;font-weight:700">${count}</span>` : '');
-    btn.onclick = () => toggleGroup(g);
-    wrap.appendChild(btn);
-    container.appendChild(wrap);
+    html += `<div class="card">
+      <div class="card-title">${esc(g)}</div>`;
 
-    // Insert sub-panel right after the active group button
-    if (openGroup === g) {
-      const panel = document.createElement('div');
-      panel.innerHTML = buildSubPanelHTML(groups[g]);
-      container.appendChild(panel);
+    if (hasSubgroups) {
+      const subgroups = [...new Set(items.map(p => p.subgroup).filter(Boolean))];
+      subgroups.forEach(sg => {
+        html += `<div style="font-size:.78rem;font-weight:600;color:var(--text2);margin:8px 0 4px;padding-left:4px">${esc(sg)}</div>`;
+        items.filter(p => p.subgroup === sg).forEach(p => {
+          html += buildProductRow(p);
+        });
+      });
+    } else {
+      items.forEach(p => {
+        html += buildProductRow(p);
+      });
     }
+
+    html += '</div>';
   });
+
+  container.innerHTML = html;
 }
 
-function toggleGroup(group) {
-  openGroup = openGroup === group ? null : group;
-  openSubgroup = null;
-  renderProductGroups();
-}
-
-function getProductCount(productId) {
-  return materials.filter(m => m.productId === productId).reduce((s, m) => s + m.qty, 0);
+function getProductEntries(productId) {
+  return materials.filter(m => m.productId === productId);
 }
 
 function buildProductRow(p) {
@@ -429,61 +405,36 @@ function buildProductRow(p) {
   const qtyLabel = isMetre ? 'Metre' : 'Adet';
   let rangeHint = '';
   if (p.priceMax) rangeHint = `<span style="font-size:.65rem;color:var(--text2);margin-left:4px">(${fmtMoney(p.price)} - ${fmtMoney(p.priceMax)})</span>`;
-  const added = getProductCount(p.id);
-  const addedBadge = added > 0 ? `<span style="background:#1e8e3e;color:#fff;border-radius:10px;padding:2px 8px;font-size:.7rem;font-weight:600;margin-left:6px">${added} ${isMetre ? 'mt' : 'adet'} eklendi</span>` : '';
-  return `<div class="sub-item" style="flex-wrap:wrap;gap:6px;padding:8px 10px;${added > 0 ? 'background:#e6f4ea;' : ''}">
-    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:6px">
-      <span class="si-name">${esc(p.name)}${rangeHint}${addedBadge}</span>
-    </div>
-    <div style="display:flex;gap:6px;align-items:center;width:100%">
-      <div style="display:flex;flex-direction:column;gap:2px">
-        <label style="font-size:.65rem;color:var(--text2)">${qtyLabel}</label>
-        <input type="number" id="qty_${p.id}" value="1" min="0" style="width:60px;padding:5px;border:1.5px solid var(--border);border-radius:6px;font-size:.82rem;text-align:center" onclick="event.stopPropagation()">
-      </div>
-      <div style="display:flex;flex-direction:column;gap:2px">
-        <label style="font-size:.65rem;color:var(--text2)">Birim TL</label>
-        <input type="number" id="prc_${p.id}" value="${p.price}" min="0" step="0.1" style="width:80px;padding:5px;border:1.5px solid var(--border);border-radius:6px;font-size:.82rem;text-align:center" onclick="event.stopPropagation()">
-      </div>
-      <button class="btn btn-success btn-sm" onclick="event.stopPropagation();addProductWithQty('${p.id}')" style="margin-left:auto;padding:6px 14px">Ekle</button>
-    </div>
-  </div>`;
-}
+  const entries = getProductEntries(p.id);
+  const hasEntries = entries.length > 0;
 
-function buildSubPanelHTML(items) {
-  const hasSubgroups = items.some(p => p.subgroup);
-  let html = '<div class="sub-panel show" style="width:100%;margin:6px 0">';
-
-  if (hasSubgroups && !openSubgroup) {
-    const subgroups = [...new Set(items.map(p => p.subgroup).filter(Boolean))];
-    html += '<div style="font-size:.78rem;color:var(--text2);margin-bottom:6px;font-weight:500">Tip secin:</div>';
-    subgroups.forEach(sg => {
-      const safeSg = sg.replace(/'/g, "\\'");
-      html += `<div class="sub-item" onclick="selectSubgroup('${safeSg}')">
-        <span class="si-name">${esc(sg)}</span>
-        <span class="si-price" style="font-size:.75rem;color:var(--text2)">&#9654;</span>
-      </div>`;
-    });
-  } else if (hasSubgroups && openSubgroup) {
-    html += `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-      <button class="btn btn-outline btn-sm" onclick="openSubgroup=null;renderProductGroups()" style="padding:4px 10px;font-size:.75rem">&#9664; Geri</button>
-      <span style="font-weight:600;font-size:.85rem">${esc(openSubgroup)}</span>
+  let html = `<div style="padding:6px 8px;margin-bottom:4px;border-radius:8px;${hasEntries ? 'background:#e6f4ea;border:1px solid #a8dab5;' : 'background:#f8f9fa;'}">
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+      <span style="font-weight:500;font-size:.82rem;flex:1;min-width:100px">${esc(p.name)}${rangeHint}</span>
+      <div style="display:flex;gap:4px;align-items:center">
+        <input type="number" id="qty_${p.id}" value="1" min="0" style="width:50px;padding:4px;border:1.5px solid var(--border);border-radius:6px;font-size:.8rem;text-align:center" onclick="event.stopPropagation()" placeholder="${qtyLabel}">
+        <span style="font-size:.65rem;color:var(--text2)">${qtyLabel}</span>
+      </div>
+      <div style="display:flex;gap:4px;align-items:center">
+        <input type="number" id="prc_${p.id}" value="${p.price}" min="0" step="0.1" style="width:70px;padding:4px;border:1.5px solid var(--border);border-radius:6px;font-size:.8rem;text-align:center" onclick="event.stopPropagation()">
+        <span style="font-size:.65rem;color:var(--text2)">TL</span>
+      </div>
+      <button class="btn btn-success btn-sm" onclick="event.stopPropagation();addProductWithQty('${p.id}')" style="padding:4px 12px;font-size:.75rem">Ekle</button>
     </div>`;
-    items.filter(p => p.subgroup === openSubgroup).forEach(p => {
-      html += buildProductRow(p);
-    });
-  } else {
-    items.forEach(p => {
-      html += buildProductRow(p);
+
+  // Show added entries
+  if (hasEntries) {
+    entries.forEach(m => {
+      const idx = materials.indexOf(m);
+      html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;padding:3px 6px;background:rgba(255,255,255,.7);border-radius:6px;font-size:.78rem">
+        <span style="color:#1e8e3e;font-weight:600">${m.qty} ${isMetre ? 'mt' : 'adet'} x ${fmtMoney(m.price)} = ${fmtMoney(m.qty * m.price)}</span>
+        <button onclick="removeMat(${idx})" style="background:#d93025;color:#fff;border:none;border-radius:4px;padding:2px 8px;font-size:.7rem;cursor:pointer;font-weight:600">Sil</button>
+      </div>`;
     });
   }
 
   html += '</div>';
   return html;
-}
-
-function selectSubgroup(sg) {
-  openSubgroup = sg;
-  renderProductGroups();
 }
 
 // ============ ADD PRODUCT TO LIST ============
@@ -504,69 +455,12 @@ function addProductWithQty(productId) {
   });
   showToast(p.name + ' eklendi!', 'success');
   renderProductGroups();
-  renderMaterials();
-  calculate();
-}
-
-function addProduct(productId) {
-  const p = getProduct(productId);
-  if (!p) return;
-  materials.unshift({
-    uid: Date.now() + Math.random(),
-    productId: p.id,
-    name: p.group + ' - ' + p.name,
-    qty: 1,
-    price: p.price,
-    priceMax: p.priceMax || null
-  });
-  openGroup = null;
-  renderProductGroups();
-  renderMaterials();
-  calculate();
-}
-
-// ============ RENDER MATERIALS ============
-function renderMaterials() {
-  const container = document.getElementById('materialList');
-  const empty = document.getElementById('emptyMat');
-
-  if (materials.length === 0) {
-    container.innerHTML = '';
-    empty.style.display = 'block';
-    return;
-  }
-  empty.style.display = 'none';
-
-  container.innerHTML = materials.map((m, i) => {
-    const total = m.qty * m.price;
-    const rangeHint = m.priceMax ? `<span style="font-size:.65rem;color:var(--text2)">${fmtMoney(m.price)}${m.priceMax ? ' - ' + fmtMoney(m.priceMax) : ''}</span>` : '';
-    const isMetre = m.name.includes('(mt)');
-    return `<div class="mat-item">
-      <div class="mi-name">${esc(m.name)}${rangeHint ? '<br>' + rangeHint : ''}</div>
-      <div class="mi-field">
-        <label>${isMetre ? 'Metre' : 'Adet'}</label>
-        <input type="number" value="${m.qty}" min="0" onchange="updateMat(${i},'qty',this.value)">
-      </div>
-      <div class="mi-field">
-        <label>Birim TL</label>
-        <input type="number" value="${m.price}" min="0" step="0.1" onchange="updateMat(${i},'price',this.value)">
-      </div>
-      <div class="mi-total">${fmtMoney(total)}</div>
-      <button class="mi-del" onclick="removeMat(${i})">X</button>
-    </div>`;
-  }).join('');
-}
-
-function updateMat(idx, field, val) {
-  if (field === 'qty') materials[idx].qty = parseFloat(val) || 0;
-  if (field === 'price') materials[idx].price = parseFloat(val) || 0;
-  renderMaterials();
   calculate();
 }
 
 function removeMat(idx) {
   materials.splice(idx, 1);
-  renderMaterials();
+  renderProductGroups();
   calculate();
 }
 
@@ -636,9 +530,9 @@ function resetForm() {
   document.getElementById('offerPrice').value = '';
   materials = [];
   addDefaultItems();
-  openGroup = null;
+
   renderProductGroups();
-  renderMaterials();
+
   calculate();
 }
 
@@ -667,9 +561,9 @@ function clearMaterials() {
   if (materials.length === 0) return;
   if (!confirm('Tum malzemeleri temizlemek istiyor musunuz?')) return;
   materials = [];
-  openGroup = null;
+
   renderProductGroups();
-  renderMaterials();
+
   calculate();
 }
 
@@ -686,9 +580,9 @@ function editFromHistory(id) {
   document.getElementById('projectNote').value = p.note || '';
   document.getElementById('offerPrice').value = p.offer || '';
   materials = (p.materials || []).map(m => ({...m}));
-  openGroup = null;
+
   renderProductGroups();
-  renderMaterials();
+
   calculate();
   switchTab('calc');
 }
@@ -778,9 +672,9 @@ function loadToEditor() {
   document.getElementById('projectNote').value = p.note || '';
   document.getElementById('offerPrice').value = p.offer || '';
   materials = (p.materials || []).map(m => ({...m}));
-  openGroup = null;
+
   renderProductGroups();
-  renderMaterials();
+
   calculate();
   closeModal();
   switchTab('calc');
