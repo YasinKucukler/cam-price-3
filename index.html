@@ -469,8 +469,17 @@ function buildProductRow(p) {
   if (hasEntries) {
     entries.forEach(m => {
       const idx = materials.indexOf(m);
-      html += `<div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;padding:3px 6px;background:rgba(255,255,255,.7);border-radius:6px;font-size:.78rem">
-        <span style="color:#1e8e3e;font-weight:600">${m.qty} ${isMetre ? 'mt' : 'adet'} x ${fmtMoney(m.price)} = ${fmtMoney(m.qty * m.price)}</span>
+      html += `<div style="display:flex;gap:6px;align-items:center;margin-top:4px;padding:4px 6px;background:rgba(255,255,255,.7);border-radius:6px;font-size:.78rem;flex-wrap:wrap">
+        <div style="display:flex;gap:4px;align-items:center">
+          <input type="number" value="${m.qty}" min="0" style="width:45px;padding:3px;border:1.5px solid #a8dab5;border-radius:4px;font-size:.78rem;text-align:center" onchange="updateMat(${idx},'qty',this.value)" onclick="event.stopPropagation()">
+          <span style="font-size:.65rem;color:var(--text2)">${isMetre ? 'mt' : 'ad'}</span>
+        </div>
+        <span style="color:var(--text2);font-size:.7rem">x</span>
+        <div style="display:flex;gap:4px;align-items:center">
+          <input type="number" value="${m.price}" min="0" step="0.1" style="width:65px;padding:3px;border:1.5px solid #a8dab5;border-radius:4px;font-size:.78rem;text-align:center" onchange="updateMat(${idx},'price',this.value)" onclick="event.stopPropagation()">
+          <span style="font-size:.65rem;color:var(--text2)">TL</span>
+        </div>
+        <span style="color:#1e8e3e;font-weight:700;font-size:.78rem;margin-left:auto">= ${fmtMoney(m.qty * m.price)}</span>
         <button onclick="removeMat(${idx})" style="background:#d93025;color:#fff;border:none;border-radius:4px;padding:2px 8px;font-size:.7rem;cursor:pointer;font-weight:600">Sil</button>
       </div>`;
     });
@@ -497,6 +506,13 @@ function addProductWithQty(productId) {
     priceMax: p.priceMax || null
   });
   showToast(p.name + ' eklendi!', 'success');
+  renderProductGroups();
+  calculate();
+}
+
+function updateMat(idx, field, val) {
+  if (field === 'qty') materials[idx].qty = parseFloat(val) || 0;
+  if (field === 'price') materials[idx].price = parseFloat(val) || 0;
   renderProductGroups();
   calculate();
 }
