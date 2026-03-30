@@ -407,6 +407,29 @@ function toggleGroup(group) {
   renderProductGroups();
 }
 
+function buildProductRow(p) {
+  const isMetre = p.name.includes('(mt)');
+  const qtyLabel = isMetre ? 'Metre' : 'Adet';
+  let rangeHint = '';
+  if (p.priceMax) rangeHint = `<span style="font-size:.65rem;color:var(--text2);margin-left:4px">(${fmtMoney(p.price)} - ${fmtMoney(p.priceMax)})</span>`;
+  return `<div class="sub-item" style="flex-wrap:wrap;gap:6px;padding:8px 10px">
+    <div style="display:flex;justify-content:space-between;align-items:center;width:100%;margin-bottom:6px">
+      <span class="si-name">${esc(p.name)}${rangeHint}</span>
+    </div>
+    <div style="display:flex;gap:6px;align-items:center;width:100%">
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <label style="font-size:.65rem;color:var(--text2)">${qtyLabel}</label>
+        <input type="number" id="qty_${p.id}" value="1" min="0" style="width:60px;padding:5px;border:1.5px solid var(--border);border-radius:6px;font-size:.82rem;text-align:center" onclick="event.stopPropagation()">
+      </div>
+      <div style="display:flex;flex-direction:column;gap:2px">
+        <label style="font-size:.65rem;color:var(--text2)">Birim TL</label>
+        <input type="number" id="prc_${p.id}" value="${p.price}" min="0" step="0.1" style="width:80px;padding:5px;border:1.5px solid var(--border);border-radius:6px;font-size:.82rem;text-align:center" onclick="event.stopPropagation()">
+      </div>
+      <button class="btn btn-success btn-sm" onclick="event.stopPropagation();addProductWithQty('${p.id}')" style="margin-left:auto;padding:6px 14px">Ekle</button>
+    </div>
+  </div>`;
+}
+
 function buildSubPanelHTML(items) {
   const hasSubgroups = items.some(p => p.subgroup);
   let html = '<div class="sub-panel show" style="width:100%;margin:6px 0">';
@@ -427,21 +450,11 @@ function buildSubPanelHTML(items) {
       <span style="font-weight:600;font-size:.85rem">${esc(openSubgroup)}</span>
     </div>`;
     items.filter(p => p.subgroup === openSubgroup).forEach(p => {
-      let priceText = fmtMoney(p.price);
-      if (p.priceMax) priceText += ' - ' + fmtMoney(p.priceMax);
-      html += `<div class="sub-item" onclick="addProduct('${p.id}')">
-        <span class="si-name">${esc(p.name)}</span>
-        <span class="si-price">${priceText}</span>
-      </div>`;
+      html += buildProductRow(p);
     });
   } else {
     items.forEach(p => {
-      let priceText = fmtMoney(p.price);
-      if (p.priceMax) priceText += ' - ' + fmtMoney(p.priceMax);
-      html += `<div class="sub-item" onclick="addProduct('${p.id}')">
-        <span class="si-name">${esc(p.name)}</span>
-        <span class="si-price">${priceText}</span>
-      </div>`;
+      html += buildProductRow(p);
     });
   }
 
@@ -455,6 +468,26 @@ function selectSubgroup(sg) {
 }
 
 // ============ ADD PRODUCT TO LIST ============
+function addProductWithQty(productId) {
+  const p = getProduct(productId);
+  if (!p) return;
+  const qtyEl = document.getElementById('qty_' + productId);
+  const prcEl = document.getElementById('prc_' + productId);
+  const qty = parseFloat(qtyEl ? qtyEl.value : 1) || 1;
+  const price = parseFloat(prcEl ? prcEl.value : p.price) || p.price;
+  materials.unshift({
+    uid: Date.now() + Math.random(),
+    productId: p.id,
+    name: p.group + ' - ' + p.name,
+    qty: qty,
+    price: price,
+    priceMax: p.priceMax || null
+  });
+  showToast(p.name + ' eklendi!', 'success');
+  renderMaterials();
+  calculate();
+}
+
 function addProduct(productId) {
   const p = getProduct(productId);
   if (!p) return;
